@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Minora Duel Monsters</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-ui">
+        <div id="status-bar">
+            <h2 id="match-status">Đang chờ đối thủ...</h2>
+        </div>
+        <div id="main-layout">
+            <div class="game-column">
+                <div class="player-info opponent-info">
+                    <div class="side-content"></div> 
+                    <div class="lp-container">
+                        <div id="opt-lp-text" class="lp-text">100</div>
+                        <div class="lp-bar"><div id="opt-lp-fill" class="lp-fill"></div></div>
+                    </div>
+                    <div class="side-content"></div>
+                </div>
+                <div class="battlefield">
+                    <div class="field-row" id="opt-field">
+                        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+                    </div>
+                    <div class="field-row" id="ply-field">
+                        <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
+                    </div>
+                </div>
+                <div class="player-info">
+                    <div class="side-content left">
+                        <div id="turn-indicator">ĐANG ĐỢI...</div>
+                        <div id="timer-text" style="color: #f1c40f; margin-left: 10px; font-weight: bold;"></div>
+                    </div>
+                    <div class="lp-container">
+                        <div id="ply-lp-text" class="lp-text">100</div>
+                        <div class="lp-bar"><div id="ply-lp-fill" class="lp-fill"></div></div>
+                    </div>
+                    <div class="side-content right">
+                        <button id="end-turn-btn" onclick="endTurn()" disabled>KẾT THÚC LƯỢT</button>
+                    </div>
+                </div>
+                <div id="player-hand" class="hand"></div>
+            </div>
+        </div>
+    </div>
+<script>
+    const socket = io(window.location.origin);
+    const matchStatus = document.getElementById('match-status');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const endTurnBtn = document.getElementById('end-turn-btn');
+    let selectedAttackerIndex = null; 
+    let isMyTurn = false; 
+    let timeLeft = 30;
+    let timerInterval = null;
+    socket.on('startGame', (data) => {
+        matchStatus.innerText = "TRẬN ĐẤU BẮT ĐẦU!";
+        renderHand(data.hand);
+        updateLP('ply', data.lp);
+        updateLP('opt', data.oppLp);
+    });
+    socket.on('updateState', (data) => {
+        window.totalRounds = data.totalTurns;
+        isMyTurn = (data.currentTurnId === socket.id);
+        window.alreadySummonedClientSide = data.playerHasSummoned;
+        renderField('ply-field', data.playerField);
+        renderField('opt-field', data.opponentField);
+        renderHand(data.playerHand);
+        selectedAttackerIndex = null; 
+        updateLP('ply', data.playerLp); 
+        updateLP('opt', data.opponentLp);
+        const timerEl = document.getElementById('timer-text');
+        clearInterval(timerInterval);
+        const btn = document.getElementById('end-turn-btn');
+        const indicator = document.getElementById('turn-indicator');
+        btn.disabled = !isMyTurn;
+        if (isMyTurn) {
+            indicator.innerText = "LƯỢT CỦA BẠN";
+            indicator.style.color = "#2ecc71";
+        } else {
+            indicator.innerText = "LƯỢT ĐỐI THỦ";
+            indicator.style.color = "#e74c3c";
+        }
+        timeLeft = 30;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerEl.innerText = `(${timeLeft}s)`;
+            if (timeLeft <= 5) {
+                timerEl.style.color = "#e74c3c"; 
+            } else {
+                timerEl.style.color = "#f1c40f";
+            }
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+        if (data.winnerId !== null) {
+            handleGameOver(data.winnerId, data.isDisconnectWin);
+        }
+    });
+    function handleGameOver(winnerId, isDisconnectWin) {
+        const matchStatus = document.getElementById('match-status');
+        const timerEl = document.getElementById('timer-text');
+        document.getElementById('end-turn-btn').disabled = true;
+        document.body.style.pointerEvents = "none";
+        clearInterval(timerInterval);
+        timerEl.innerText = "";
+        if (winnerId === socket.id) {
+            if (isDisconnectWin) {
+                matchStatus.innerText = "ĐỐI THỦ RỜI TRẬN! BẠN THẮNG!";
+            } else {
+                matchStatus.innerText = "KẾT THÚC! CHÚC MỪNG CHIẾN THẮNG!";
+            }
+            matchStatus.style.color = "#2ecc71";
+        } else {
+            matchStatus.innerText = "KẾT THÚC! BẠN ĐÃ THẤT BẠI!";
+            matchStatus.style.color = "#e74c3c";
+        }
+    }
+    function renderField(id, field) {
+        const slots = document.getElementById(id).querySelectorAll('.slot');
+        slots.forEach((slot, i) => {
+            slot.innerHTML = '';
+            slot.onclick = null; 
+            slot.classList.remove('selected-attacker', 'can-be-attacked');
+            if (field[i]) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `card ${field[i].type} on-field`;
+                if (field[i].hasAttacked) {
+                    cardDiv.style.opacity = "0.5";
+                    cardDiv.style.filter = "grayscale(100%)";
+                }
+                cardDiv.innerHTML = `
+                    <div class="card-name">${field[i].name}</div>
+                    <div style="color: #f1c40f; font-size: 15px;">${'★'.repeat(field[i].level)}</div>
+                    <div class="card-stats">ATK: ${field[i].atk} | HP: ${field[i].hp}</div>
+                `;
+                cardDiv.onclick = (e) => {
+                    e.stopPropagation(); 
+                    if (id === 'ply-field') {
+                        selectAttacker(i, field[i]);
+                    } else if (id === 'opt-field') {
+                        targetMonster(i);
+                    }
+                };
+                slot.appendChild(cardDiv);
+            } else {
+                if (id === 'opt-field') {
+                    slot.onclick = () => targetMonster(null); 
+                }
+            }
+        });
+    }
+    function renderHand(handData) {
+        const handContainer = document.getElementById('player-hand');
+        handContainer.innerHTML = '';
+        const maxlv = (window.totalRounds / 2 + 0.5); 
+        handData.forEach((card, index) => {
+            const cardElement = document.createElement('div');
+            cardElement.className = 'card';
+            if (card.level > maxlv) {
+                cardElement.classList.add('card-cannot-summon');
+            } else {
+                cardElement.classList.add('card-can-summon');
+            }
+            cardElement.innerHTML = `
+                <div class="card-name">${card.name}</div>
+                <div style="color: #f1c40f; font-size: 15px;">${'★'.repeat(card.level)}</div>
+                <div class="card-stats">ATK: ${card.atk} | HP: ${card.hp}</div>
+            `;
+            cardElement.onclick = () => summonCard(index);
+            handContainer.appendChild(cardElement);
+        });
+    }
+    function summonCard(index) {
+        const btn = document.getElementById('end-turn-btn');
+        if (btn.disabled || window.alreadySummonedClientSide) return;
+        window.alreadySummonedClientSide = true;
+        socket.emit('summonCard', index);
+    }
+    function selectAttacker(index, cardData) {
+        if (!isMyTurn || window.totalRounds <= 1) return; 
+        if (cardData.hasAttacked) {
+            alert("Quái thú này đã tấn công rồi!");
+            return;
+        }
+        selectedAttackerIndex = index;
+        document.querySelectorAll('#ply-field .slot').forEach(s => s.classList.remove('selected-attacker'));
+        document.getElementById('ply-field').querySelectorAll('.slot')[index].classList.add('selected-attacker');
+        console.log("Đã chọn kẻ tấn công:", cardData.name);
+    }
+    function targetMonster(targetIdx) {
+        if (selectedAttackerIndex === null) return;
+        socket.emit('attack', {
+            attackerIdx: selectedAttackerIndex,
+            targetIdx: targetIdx
+        });
+        selectedAttackerIndex = null;
+        document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected-attacker'));
+    }
+    function updateLP(target, currentLP) {
+        const maxLP = 100; 
+        const percent = Math.max(0, (currentLP / maxLP) * 100);
+        const fillEl = document.getElementById(`${target}-lp-fill`);
+        const textEl = document.getElementById(`${target}-lp-text`);
+        if (fillEl && textEl) {
+            fillEl.style.width = percent + "%";
+            textEl.innerText = currentLP;
+        }
+    }
+    function endTurn() {
+        socket.emit('endTurn');
+    }
+    socket.on('waiting', (msg) => {
+        matchStatus.innerText = msg;
+    });
+</script>
+</body>
+</html>

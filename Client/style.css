@@ -1,0 +1,290 @@
+:root {
+    --monster-bg: linear-gradient(135deg, #e67e22, #d35400);
+    --spell-bg: linear-gradient(135deg, #27ae60, #1e8449);
+    --trap-bg: linear-gradient(135deg, #8e44ad, #71368a);
+    --text-color: #ecf0f1;
+    --bg-dark: #1a1a1a;
+}
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-dark);
+    font-family: 'Segoe UI', sans-serif;
+    color: var(--text-color);
+    overflow: hidden;
+}
+#game-ui {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+#status-bar {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    border-bottom: 1px solid #34495e;
+}
+#match-status {
+    transition: all 0.5s ease;
+    font-size: 24px;
+    letter-spacing: 2px;
+}
+@keyframes finish-glow {
+    from { text-shadow: 0 0 5px #fff; }
+    to { text-shadow: 0 0 20px #fff; }
+}
+#match-status[style*="color"] {
+    animation: finish-glow 1s infinite alternate;
+}
+#main-layout {
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+}
+.game-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: 900px;
+}
+.player-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    margin: 15px 0;
+}
+.lp-container {
+    width: 350px; 
+    padding: 12px 18px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid #444;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+.lp-text {
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: #fff;
+}
+.lp-bar {
+    width: 100%;
+    height: 10px;
+    background: #222;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid #333;
+}
+.lp-fill {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #2ecc71, #27ae60);
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.opponent-info .lp-fill {
+    background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+.side-content {
+    min-width: 200px; 
+    display: flex;
+    align-items: center;
+    font-family: 'monospace';
+}
+#timer-text {
+    font-size: 18px;
+    min-width: 50px;
+    text-align: left;
+}
+.side-content.left {
+    justify-content: flex-end; /* Chữ sát vào thanh máu */
+}
+.side-content.right {
+    justify-content: flex-start; /* Nút sát vào thanh máu */
+}
+#turn-indicator {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+}
+#end-turn-btn {
+    padding: 8px 16px;
+    background: linear-gradient(to bottom, #555, #333);
+    color: #eee;
+    border: 1px solid #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+}
+#end-turn-btn:hover:not(:disabled) {
+    background: linear-gradient(to bottom, #777, #444);
+    border-color: #999;
+}
+#end-turn-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+.opponent-info .side-placeholder {
+    visibility: hidden;
+}
+.battlefield {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+}
+.field-row {
+    display: flex;
+    gap: 10px;
+}
+.slot {
+    width: 150px;
+    height: 150px;
+    border: 1px dashed rgba(255,255,255,0.2);
+    border-radius: 5px;
+    background: rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+.hand {
+    display: flex;
+    gap: 5px;
+    height: 140px;
+    align-items: flex-end;
+}
+.card {
+    width: 160px;
+    height: 160px;
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    position: relative;
+    padding: 5px;
+    box-sizing: border-box;
+}
+.card-cannot-summon {
+    border-color: #ff0000; 
+    background-color: #000000;
+}
+.card-can-summon {
+    border-color: #0dff00; 
+    background-color: #000000;
+}
+.card:hover {
+    transform: translateY(-20px);
+    z-index: 10;
+}
+.card.Monster { background: var(--monster-bg); }
+.card-name { font-size: 15px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.2); }
+.card-stats {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    right: 5px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+}
+.card.on-field {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    transform: none !important; 
+    box-shadow: none;
+    border-width: 1px;
+    font-size: 0.8em;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+.card.on-field .card-name {
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+.card.on-field .card-stats {
+    position: static; 
+    margin-top: auto; 
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    font-size: 20px;
+    background: rgba(0, 0, 0, 0.3); 
+    padding: 2px 0;
+}
+#opt-field .card {
+    border-color: #e74c3c; 
+    background: linear-gradient(135deg, #34495e, #2c3e50);
+}
+.selected-attacker {
+    border: 3px solid #2ecc71 !important;
+    box-shadow: 0 0 15px #2ecc71, inset 0 0 10px #2ecc71;
+    transform: scale(1.05) translateY(-5px) !important;
+    z-index: 20;
+    position: relative;
+    animation: pulse-border 1.5s infinite;
+}
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 5px #2ecc71; }
+    50% { box-shadow: 0 0 20px #2ecc71; }
+    100% { box-shadow: 0 0 5px #2ecc71; }
+}
+#opt-field .slot:hover {
+    background: rgba(231, 76, 60, 0.2);
+    cursor: crosshair;
+    border-color: #e74c3c;
+}
+.card.on-field.has-attacked {
+    opacity: 0.6;
+    filter: grayscale(0.8) brightness(0.7);
+    cursor: not-allowed;
+    border-style: dotted !important;
+}
+.card-destroyed {
+    animation: fade-out-explode 0.5s forwards;
+}
+@keyframes fade-out-explode {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; filter: blur(5px); }
+}
+#opt-field .slot {
+    pointer-events: auto; 
+}
+.card.on-field.has-attacked:hover::after {
+    content: "ĐÃ TẤN CÔNG";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 2px 5px;
+    font-size: 10px;
+    border-radius: 3px;
+    pointer-events: none;
+}
